@@ -4,6 +4,8 @@ A simple full-stack e-commerce platform built with modern technologies, featurin
 
 ## ✨ Features
 
+![Achitecture](./assets/architecture_img.png)
+
 ### 🛍️ Customer Features
 - Browse products by categories and price ranges
 - Advanced search and filtering
