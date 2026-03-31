@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"os"
+	"strconv"
 
 	"ecommerce-api/models"
 	"ecommerce-api/services"
@@ -150,4 +151,23 @@ func setCookie(ctx *gin.Context, token string) {
 	}
 
 	ctx.SetCookie("access_token", token, 3600, "/", "", secure, httpOnly)
+}
+
+func (c *UserController) ListUsers(ctx *gin.Context) {
+	limitStr := ctx.DefaultQuery("limit", "20")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil || limit <= 0 {
+		limit = 20 // default
+	}
+
+	name := ctx.Query("name")
+	role := ctx.Query("role")
+
+	users, err := c.userService.ListUsers(limit, name, role)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(utils.MessageFetchUserFail))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(users, utils.MessageFetchUserSuccess))
 }

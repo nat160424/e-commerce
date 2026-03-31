@@ -10,6 +10,7 @@ const (
 	MessageUserRegisterFail    = "Đăng ký không thành công"
 
 	MessageFetchUserSuccess = "Lấy thông tin thành công"
+	MessageFetchUserFail    = "Lấy thông tin thất bại"
 )
 
 const (

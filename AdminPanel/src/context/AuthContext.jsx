@@ -37,6 +37,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const getUsers = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/admin/users`, {
+        withCredentials: true,
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      return [];
+    }
+  };
+
   // LOGIN
   const login = async (email, password) => {
     try {

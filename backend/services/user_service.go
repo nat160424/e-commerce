@@ -213,3 +213,42 @@ func (s *UserService) ForgotPassword(email string) (string, error) {
 
 	return tokenString, nil
 }
+
+func (s *UserService) ListUsers(limit int64, name, role string) ([]models.User, error) {
+	filter := bson.M{}
+
+	if name != "" {
+		filter["name"] = bson.M{"$regex": name, "$options": "i"}
+	}
+
+	if role != "" {
+		filter["role"] = role
+	}
+
+	findOptions := options.Find()
+	if limit > 0 {
+		findOptions.SetLimit(limit)
+	}
+	findOptions.SetSort(bson.M{"created_at": -1}) // Sort by newest first
+
+	var users []models.User
+	cursor, err := s.collection.Find(context.Background(), filter, findOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var user models.User
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}

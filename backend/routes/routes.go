@@ -84,27 +84,30 @@ func SetupRoutes(r *gin.Engine, db *mongo.Database) {
 
 	// Admin routes
 	admin := r.Group("/api/admin")
-	admin.Use(middleware.Auth(), middleware.AdminAuth())
+	admin.GET("/users", userController.ListUsers)
+	admin.Use(middleware.Auth())
 	{
-		// Image upload
-		admin.POST("/upload-images", productController.UploadImages)
+		admin.Use(middleware.AdminAuth())
+		{
+			admin.POST("/upload-images", productController.UploadImages)
 
-		// Product management
-		admin.POST("/products", productController.CreateProduct)
-		admin.PUT("/products/:id", productController.UpdateProduct)
-		admin.DELETE("/products/:id", productController.DeleteProduct)
+			// Product management
+			admin.POST("/products", productController.CreateProduct)
+			admin.PUT("/products/:id", productController.UpdateProduct)
+			admin.DELETE("/products/:id", productController.DeleteProduct)
 
-		// Order management
-		admin.PUT("/orders/:id/status", orderController.UpdateOrderStatus)
-		admin.GET("/orders", orderController.GetAllOrders)
+			// Order management
+			admin.PUT("/orders/:id/status", orderController.UpdateOrderStatus)
+			admin.GET("/orders", orderController.GetAllOrders)
 
-		// Category management
-		admin.POST("/categories", categoryController.CreateCategory)
-		admin.PUT("/categories/:id", categoryController.UpdateCategory)
-		admin.DELETE("/categories/:id", categoryController.DeleteCategory)
-		admin.GET("/categories", categoryController.ListCategories)
+			// Category management
+			admin.POST("/categories", categoryController.CreateCategory)
+			admin.PUT("/categories/:id", categoryController.UpdateCategory)
+			admin.DELETE("/categories/:id", categoryController.DeleteCategory)
+			admin.GET("/categories", categoryController.ListCategories)
 
-		admin.GET("/stats", adminController.GetAdminStats)
+			admin.GET("/stats", adminController.GetAdminStats)
+		}
 	}
 
 	// Health check
