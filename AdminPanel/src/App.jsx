@@ -5,7 +5,7 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import ListProducts from "./pages/ListProducts";
 import Orders from "./pages/Orders";
-import Login from "./components/Login";
+import LoginPage from "./pages/Login";
 import Home from "./pages/Home";
 import UpdateProduct from "./pages/UpdateProduct";
 import AddProduct from "./pages/AddProduct";
@@ -30,8 +30,10 @@ const App = () => {
         pauseOnHover
         theme="light"
       />
-      {isAuthenticated === null ? (
-        <Login />
+      {isAuthenticated === null || isAuthenticated === false ? (
+        <Routes>
+          <Route path="/*" element={<LoginPage />} />
+        </Routes>
       ) : (
         <>
           <Navbar />
@@ -41,18 +43,9 @@ const App = () => {
             <div className="w-[70%] mx-auto ml-[max(5vw,25px)] my-8 text-gray-600 text-base">
               <Routes>
                 <Route path="/admin" element={<Home />} />
-                <Route
-                  path="/admin/add-item"
-                  element={<AddProduct />}
-                />
-                <Route
-                  path="/admin/update-item/:id"
-                  element={<UpdateProduct />}
-                />
-                <Route
-                  path="/admin/list-items"
-                  element={<ListProducts />}
-                />
+                <Route path="/admin/add-item" element={<AddProduct />} />
+                <Route path="/admin/update-item/:id" element={<UpdateProduct />} />
+                <Route path="/admin/list-items" element={<ListProducts />} />
                 <Route path="/admin/orders" element={<Orders />} />
               </Routes>
             </div>

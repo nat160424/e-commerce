@@ -5,11 +5,10 @@ import { AuthContext } from "../context/AuthContext";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { setIsAuthenticated } = useContext(AuthContext);
+  const { setIsAuthenticated,logout } = useContext(AuthContext);
 
-  const onLogout = () => {
-    setIsAuthenticated(false);
-    navigate("/");
+  const onLogout = async () => {
+    await logout();
   };
 
   return (
