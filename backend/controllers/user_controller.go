@@ -177,14 +177,30 @@ func (c *UserController) ListUsers(ctx *gin.Context) {
 		limit = 20 // default
 	}
 
+	pageStr := ctx.DefaultQuery("page", "1")
+	page, err := strconv.ParseInt(pageStr, 10, 64)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
 	name := ctx.Query("name")
 	role := ctx.Query("role")
 
-	users, err := c.userService.ListUsers(limit, name, role)
+	users, total, err := c.userService.ListUsers(limit, (page-1)*limit, name, role)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(utils.MessageFetchUserFail))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(users, utils.MessageFetchUserSuccess))
+	totalPages := (total + limit - 1) / limit // Ceiling division
+
+	response := gin.H{
+		"users":       users,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"total_pages": totalPages,
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(response, utils.MessageFetchUserSuccess))
 }

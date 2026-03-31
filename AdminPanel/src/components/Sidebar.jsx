@@ -5,6 +5,7 @@ import {
   FaPlus,
   FaList,
   FaShoppingCart,
+  FaUsers,
 } from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
 
@@ -72,6 +73,21 @@ const Sidebar = () => {
         >
           <FaShoppingCart className="w-5 h-5 shrink-0" />
           <p className="hidden md:block">Orders</p>
+        </NavLink>
+
+        <NavLink
+          to="/admin/users"
+          key="users"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
+              isActive
+                ? "bg-blue-500 text-white shadow-md"
+                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
+            }`
+          }
+        >
+          <FaUsers className="w-5 h-5 shrink-0" />
+          <p className="hidden md:block">Users</p>
         </NavLink>
       </nav>
     </div>

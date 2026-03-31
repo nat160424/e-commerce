@@ -9,6 +9,7 @@ import LoginPage from "./pages/Login";
 import Home from "./pages/Home";
 import UpdateProduct from "./pages/UpdateProduct";
 import AddProduct from "./pages/AddProduct";
+import Users from "./pages/Users";
 import { AuthContext } from "./context/AuthContext";
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
@@ -47,6 +48,7 @@ const App = () => {
                 <Route path="/admin/update-item/:id" element={<UpdateProduct />} />
                 <Route path="/admin/list-items" element={<ListProducts />} />
                 <Route path="/admin/orders" element={<Orders />} />
+                <Route path="/admin/users" element={<Users />} />
               </Routes>
             </div>
           </div>

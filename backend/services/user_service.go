@@ -220,7 +220,7 @@ func (s *UserService) ForgotPassword(email string) (string, error) {
 	return tokenString, nil
 }
 
-func (s *UserService) ListUsers(limit int64, name, role string) ([]models.User, error) {
+func (s *UserService) ListUsers(limit, offset int64, name, role string) ([]models.User, int64, error) {
 	filter := bson.M{}
 
 	if name != "" {
@@ -231,30 +231,39 @@ func (s *UserService) ListUsers(limit int64, name, role string) ([]models.User, 
 		filter["role"] = role
 	}
 
+	// Get total count
+	total, err := s.collection.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	findOptions := options.Find()
 	if limit > 0 {
 		findOptions.SetLimit(limit)
+	}
+	if offset > 0 {
+		findOptions.SetSkip(offset)
 	}
 	findOptions.SetSort(bson.M{"created_at": -1}) // Sort by newest first
 
 	var users []models.User
 	cursor, err := s.collection.Find(context.Background(), filter, findOptions)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer cursor.Close(context.Background())
 
 	for cursor.Next(context.Background()) {
 		var user models.User
 		if err := cursor.Decode(&user); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		users = append(users, user)
 	}
 
 	if err := cursor.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return users, nil
+	return users, total, nil
 }
