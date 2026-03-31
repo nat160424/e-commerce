@@ -70,11 +70,17 @@ func (s *UserService) GetUserByID(id primitive.ObjectID) (*models.User, error) {
 	return &user, nil
 }
 
-func (s *UserService) UpdateUser(id primitive.ObjectID, name string) (*models.User, error) {
+func (s *UserService) UpdateUserProfile(id primitive.ObjectID, name, cccd, address, phone, paymentCard string, dateOfBirth primitive.DateTime, gender string) (*models.User, error) {
 	update := bson.M{
 		"$set": bson.M{
-			"name":       name,
-			"updated_at": time.Now(),
+			"name":         name,
+			"cccd":         cccd,
+			"address":      address,
+			"phone":        phone,
+			"payment_card": paymentCard,
+			"date_of_birth": dateOfBirth,
+			"gender":       gender,
+			"updated_at":   primitive.NewDateTimeFromTime(time.Now()),
 		},
 	}
 

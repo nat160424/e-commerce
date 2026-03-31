@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"ecommerce-api/models"
 	"ecommerce-api/services"
@@ -121,7 +122,13 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	var input struct {
-		Name string `json:"name" binding:"required"`
+		Name        string `json:"name"`
+		CCCD        string `json:"cccd"`
+		Address     string `json:"address"`
+		Phone       string `json:"phone"`
+		PaymentCard string `json:"payment_card"`
+		DateOfBirth string `json:"date_of_birth"`
+		Gender      string `json:"gender"`
 	}
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -129,7 +136,17 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 		return
 	}
 
-	user, err := c.userService.UpdateUser(userID, input.Name)
+	var dateOfBirth primitive.DateTime
+	if input.DateOfBirth != "" {
+		parsedTime, err := time.Parse(time.RFC3339, input.DateOfBirth)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid date format"))
+			return
+		}
+		dateOfBirth = primitive.NewDateTimeFromTime(parsedTime)
+	}
+
+	user, err := c.userService.UpdateUserProfile(userID, input.Name, input.CCCD, input.Address, input.Phone, input.PaymentCard, dateOfBirth, input.Gender)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, models.NewErrorResponse(err.Error()))
 		return
