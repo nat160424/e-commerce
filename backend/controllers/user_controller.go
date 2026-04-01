@@ -204,3 +204,93 @@ func (c *UserController) ListUsers(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, models.NewSuccessResponse(response, utils.MessageFetchUserSuccess))
 }
+
+func (c *UserController) UpdateUser(ctx *gin.Context) {
+	userIDStr := ctx.Param("id")
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid user ID"))
+		return
+	}
+
+	var input struct {
+		Name        string `json:"name"`
+		CCCD        string `json:"cccd"`
+		Address     string `json:"address"`
+		Phone       string `json:"phone"`
+		PaymentCard string `json:"payment_card"`
+		DateOfBirth string `json:"date_of_birth"`
+		Gender      string `json:"gender"`
+	}
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
+		return
+	}
+
+	var dateOfBirth primitive.DateTime
+	if input.DateOfBirth != "" {
+		parsedTime, err := time.Parse(time.RFC3339, input.DateOfBirth)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid date format"))
+			return
+		}
+		dateOfBirth = primitive.NewDateTimeFromTime(parsedTime)
+	}
+
+	user, err := c.userService.UpdateUserProfile(userID, input.Name, input.CCCD, input.Address, input.Phone, input.PaymentCard, dateOfBirth, input.Gender)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.NewErrorResponse("User not found"))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(user, "User updated successfully"))
+}
+
+func (c *UserController) DeleteUser(ctx *gin.Context) {
+	userIDStr := ctx.Param("id")
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid user ID"))
+		return
+	}
+
+	err = c.userService.DeleteUser(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse("Failed to delete user"))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(nil, "User deleted successfully"))
+}
+
+func (c *UserController) ChangeUserRole(ctx *gin.Context) {
+	userIDStr := ctx.Param("id")
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid user ID"))
+		return
+	}
+
+	var input struct {
+		Role string `json:"role" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
+		return
+	}
+
+	if input.Role != "user" && input.Role != "admin" {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid role"))
+		return
+	}
+
+	user, err := c.userService.ChangeUserRole(userID, input.Role)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.NewErrorResponse("User not found"))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(user, "User role updated successfully"))
+}

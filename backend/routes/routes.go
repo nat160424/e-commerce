@@ -85,6 +85,9 @@ func SetupRoutes(r *gin.Engine, db *mongo.Database) {
 	// Admin routes
 	admin := r.Group("/api/admin")
 	admin.GET("/users", userController.ListUsers)
+	admin.PUT("/users/:id", userController.UpdateUser)
+	admin.DELETE("/users/:id", userController.DeleteUser)
+	admin.PUT("/users/:id/role", userController.ChangeUserRole)
 	admin.Use(middleware.Auth())
 	{
 		admin.Use(middleware.AdminAuth())

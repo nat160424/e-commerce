@@ -8,7 +8,15 @@ import { getProfile, updateProfile } from "../api/user";
 
 const MyProfile = () => {
   const [user, setUser] = useState(null);
-  const [newEmail, setNewEmail] = useState("");
+  const [formData, setFormData] = useState({
+    name: '',
+    cccd: '',
+    address: '',
+    phone: '',
+    payment_card: '',
+    date_of_birth: '',
+    gender: ''
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false); // State for loader
@@ -22,6 +30,15 @@ const MyProfile = () => {
         const response = await getProfile();
         console.log(response);
         setUser(response.data.data);
+        setFormData({
+          name: response.data.data.name || '',
+          cccd: response.data.data.cccd || '',
+          address: response.data.data.address || '',
+          phone: response.data.data.phone || '',
+          payment_card: response.data.data.payment_card || '',
+          date_of_birth: response.data.data.date_of_birth ? new Date(response.data.data.date_of_birth).toISOString().split('T')[0] : '',
+          gender: response.data.data.gender || ''
+        });
       } catch (error) {
         toast.error("Failed to load profile. Please log in again.", {
           position: "top-center",
@@ -39,10 +56,19 @@ const MyProfile = () => {
     fetchUserData();
   }, [isAuthenticated]);
 
-  const handleEmailChange = async () => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateProfile = async () => {
     try {
-      const response = await updateProfile({ email: newEmail });
-      toast.success("Email updated successfully", {
+      const updateData = {
+        ...formData,
+        date_of_birth: formData.date_of_birth ? new Date(formData.date_of_birth).toISOString() : null
+      };
+      const response = await updateProfile(updateData);
+      toast.success("Profile updated successfully", {
         position: "top-center",
         autoClose: 1500,
         hideProgressBar: false,
@@ -52,10 +78,10 @@ const MyProfile = () => {
         progress: undefined,
         theme: "light",
       });
-      setUser((prev) => ({ ...prev, email: response.data.updatedEmail }));
+      setUser(response.data);
       setIsEditing(false);
     } catch (error) {
-      toast.error("Failed to update email", {
+      toast.error("Failed to update profile", {
         position: "top-center",
         autoClose: 1500,
         hideProgressBar: false,
@@ -84,45 +110,170 @@ const MyProfile = () => {
           <FaUser className="text-black" /> Thông tin tài khoản
         </h2>
 
-        <div className="space-y-6">
-          <div className="text-lg font-medium flex flex-col">
-            <span className="text-[#8B4513]">Họ và tên</span>
-            <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
-              {user.name}
-            </span>
-          </div>
+        {!isEditing ? (
+          <div className="space-y-6">
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Họ và tên</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.name}
+              </span>
+            </div>
 
-          <div className="text-lg font-medium flex flex-col">
-            <span className="text-[#8B4513]">Email</span>
-            {!isEditing ? (
-              <div className="flex items-center justify-between bg-gray-100 p-2 rounded-md">
-                <span className="text-[#8B4513] font-normal">{user.email}</span>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-blue-700 hover:text-blue-900 transition"
-                >
-                  <FaEdit />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input
-                  type="email"
-                  className="border border-gray-300 p-2 rounded-md flex-1 focus:ring-1 focus:ring-blue-700 outline-none font-normal"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Enter new email"
-                />
-                <button
-                  onClick={handleEmailChange}
-                  className="bg-blue-700 text-white px-3 py-2 rounded-md hover:bg-blue-800 transition font-normal"
-                >
-                  Update
-                </button>
-              </div>
-            )}
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Email</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.email}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">CCCD</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.cccd || 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Địa chỉ</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.address || 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Số điện thoại</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.phone || 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Thẻ thanh toán</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.payment_card || 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Ngày sinh</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <div className="text-lg font-medium flex flex-col">
+              <span className="text-[#8B4513]">Giới tính</span>
+              <span className="text-[#8B4513] bg-gray-100 font-normal p-2 rounded-md">
+                {user.gender || 'Chưa cập nhật'}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setIsEditing(true)}
+              className="mt-8 w-full bg-[#8B4513] text-white px-4 py-2 rounded-md flex items-center justify-center gap-2 hover:bg-[#2C1810] transition-all duration-200 shadow-md"
+            >
+              <FaEdit /> Chỉnh sửa thông tin
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Họ và tên</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">CCCD</label>
+              <input
+                type="text"
+                name="cccd"
+                value={formData.cccd}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Địa chỉ</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Số điện thoại</label>
+              <input
+                type="text"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Thẻ thanh toán</label>
+              <input
+                type="text"
+                name="payment_card"
+                value={formData.payment_card}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Ngày sinh</label>
+              <input
+                type="date"
+                name="date_of_birth"
+                value={formData.date_of_birth}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#8B4513] font-medium mb-1">Giới tính</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 p-2 rounded-md focus:ring-1 focus:ring-blue-700 outline-none"
+              >
+                <option value="">Chọn giới tính</option>
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleUpdateProfile}
+                className="flex-1 bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800 transition"
+              >
+                Cập nhật
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* <button
           onClick={() => setIsModalOpen(true)}

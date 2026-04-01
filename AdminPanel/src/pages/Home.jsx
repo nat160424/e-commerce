@@ -9,10 +9,12 @@ const Home = () => {
     total_orders: 0,
     total_products: 0,
   });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${backendUrl}/api/admin/stats`, {
         withCredentials: true,
       });
@@ -25,6 +27,8 @@ const Home = () => {
       }
     } catch (error) {
       console.error("Error fetching statistics", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,25 +42,31 @@ const Home = () => {
         Dashboard
       </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-        <StatCard
-          title="Tổng người dùng"
-          count={stats.total_users}
-          color="blue"
-          onClick={() => navigate('/admin/users')}
-          showButton={true}
-        />
-        <StatCard
-          title="Tổng đơn hàng"
-          count={stats.total_orders}
-          color="green"
-        />
-        <StatCard
-          title="Tổng sản phẩm"
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <div className="text-lg text-gray-600">Đang tải dữ liệu...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <StatCard
+            title="Tổng người dùng"
+            count={stats.total_users}
+            color="blue"
+            onClick={() => navigate('/admin/users')}
+            showButton={true}
+          />
+          <StatCard
+            title="Tổng đơn hàng"
+            count={stats.total_orders}
+            color="green"
+          />
+          <StatCard
+            title="Tổng sản phẩm"
             count={stats.total_products}
-          color="purple"
-        />
-      </div>
+            color="purple"
+          />
+        </div>
+      )}
     </div>
   );
 };

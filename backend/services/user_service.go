@@ -113,24 +113,6 @@ func (s *UserService) GenerateToken(user *models.User) (string, error) {
 	return token.SignedString([]byte("your_jwt_secret_key_here"))
 }
 
-func (s *UserService) DeleteUser(id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
-	result, err := s.collection.DeleteOne(context.Background(), bson.M{"_id": objectID})
-	if err != nil {
-		return err
-	}
-
-	if result.DeletedCount == 0 {
-		return errors.New("user not found")
-	}
-
-	return nil
-}
-
 func (s *UserService) Login(email, password string) (string, error) {
 	var user models.User
 	err := s.collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
@@ -266,4 +248,40 @@ func (s *UserService) ListUsers(limit, offset int64, name, role string) ([]model
 	}
 
 	return users, total, nil
+}
+
+func (s *UserService) DeleteUser(id primitive.ObjectID) error {
+	result, err := s.collection.DeleteOne(context.Background(), bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (s *UserService) ChangeUserRole(id primitive.ObjectID, role string) (*models.User, error) {
+	update := bson.M{
+		"$set": bson.M{
+			"role":       role,
+			"updated_at": primitive.NewDateTimeFromTime(time.Now()),
+		},
+	}
+
+	result := s.collection.FindOneAndUpdate(
+		context.Background(),
+		bson.M{"_id": id},
+		update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	)
+
+	var user models.User
+	if err := result.Decode(&user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }

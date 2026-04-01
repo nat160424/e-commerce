@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { backendUrl } from "../App";
 import { toast } from "react-toastify";
-import { FaEye, FaChevronLeft, FaChevronRight, FaSync } from "react-icons/fa";
+import { FaEye, FaChevronLeft, FaChevronRight, FaSync, FaEdit, FaTrash, FaUserCog } from "react-icons/fa";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -10,6 +10,17 @@ const Users = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    cccd: '',
+    address: '',
+    phone: '',
+    payment_card: '',
+    date_of_birth: '',
+    gender: ''
+  });
   const [searchName, setSearchName] = useState("");
   const [searchRole, setSearchRole] = useState("");
   const itemsPerPage = 10;
@@ -66,7 +77,7 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers(currentPage, searchName, searchRole);
-  }, [currentPage]);
+  }, [currentPage, searchName, searchRole]);
 
   // Auto refresh when window regains focus
   useEffect(() => {
@@ -86,6 +97,61 @@ const Users = () => {
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setEditFormData({
+      name: user.name || '',
+      cccd: user.cccd || '',
+      address: user.address || '',
+      phone: user.phone || '',
+      payment_card: user.payment_card || '',
+      date_of_birth: user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : '',
+      gender: user.gender || ''
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      const updateData = {
+        ...editFormData,
+        date_of_birth: editFormData.date_of_birth ? new Date(editFormData.date_of_birth).toISOString() : null
+      };
+
+      await axios.put(`${backendUrl}/api/admin/users/${editingUser.id}`, updateData, { withCredentials: true });
+      toast.success("Cập nhật user thành công");
+      setEditModalOpen(false);
+      fetchUsers(currentPage, searchName, searchRole);
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật user");
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Bạn có chắc muốn xóa user này?")) return;
+
+    try {
+      await axios.delete(`${backendUrl}/api/admin/users/${userId}`, { withCredentials: true });
+      toast.success("Xóa user thành công");
+      fetchUsers(currentPage, searchName, searchRole);
+    } catch (error) {
+      toast.error("Lỗi khi xóa user");
+    }
+  };
+
+  const handleChangeRole = async (userId, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    if (!window.confirm(`Bạn có chắc muốn đổi quyền thành ${newRole}?`)) return;
+
+    try {
+      await axios.put(`${backendUrl}/api/admin/users/${userId}/role`, { role: newRole }, { withCredentials: true });
+      toast.success("Đổi quyền thành công");
+      fetchUsers(currentPage, searchName, searchRole);
+    } catch (error) {
+      toast.error("Lỗi khi đổi quyền");
     }
   };
 
@@ -204,12 +270,33 @@ const Users = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(user.date_of_birth)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
                           <button
                             className="text-blue-600 hover:text-blue-900 p-1"
                             title="Xem chi tiết"
                           >
                             <FaEye />
+                          </button>
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="text-green-600 hover:text-green-900 p-1"
+                            title="Chỉnh sửa"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleChangeRole(user.id, user.role)}
+                            className="text-yellow-600 hover:text-yellow-900 p-1"
+                            title="Đổi quyền"
+                          >
+                            <FaUserCog />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="Xóa"
+                          >
+                            <FaTrash />
                           </button>
                         </td>
                       </tr>
@@ -289,6 +376,98 @@ const Users = () => {
           </>
         )}
       </div>
+
+      {/* Edit User Modal */}
+      {editModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Chỉnh sửa người dùng</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CCCD</label>
+                <input
+                  type="text"
+                  value={editFormData.cccd}
+                  onChange={(e) => setEditFormData({...editFormData, cccd: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                <input
+                  type="text"
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData({...editFormData, address: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                <input
+                  type="text"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Thẻ thanh toán</label>
+                <input
+                  type="text"
+                  value={editFormData.payment_card}
+                  onChange={(e) => setEditFormData({...editFormData, payment_card: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
+                <input
+                  type="date"
+                  value={editFormData.date_of_birth}
+                  onChange={(e) => setEditFormData({...editFormData, date_of_birth: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+                <select
+                  value={editFormData.gender}
+                  onChange={(e) => setEditFormData({...editFormData, gender: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="Nam">Nam</option>
+                  <option value="Nữ">Nữ</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

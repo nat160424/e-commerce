@@ -9,6 +9,7 @@ import { Logout } from "../api/user";
 
 const Navbar = () => {
   const [visible, setVisible] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const {
     setShowSearch,
     getCartCount,
@@ -72,31 +73,31 @@ const Navbar = () => {
           alt="searchIcon"
           className="w-5 cursor-pointer hover:opacity-80"
         />
-        <div className="group relative">
+        <div className="relative">
           <img
-            onClick={() => (isAuthenticated ? null : navigate("/login"))}
+            onClick={() => { if (!isAuthenticated) navigate("/login"); else setShowProfileMenu(!showProfileMenu); }}
             src={assets.profile_icon}
             alt="profile icon"
             className="w-5 cursor-pointer hover:opacity-80"
           />
 
-          {isAuthenticated && (
-            <div className="group-hover:block hidden absolute dropdown-menu right-0 pt-4 z-20">
+          {isAuthenticated && showProfileMenu && (
+            <div className="absolute dropdown-menu right-0 pt-4 z-20">
               <div className="flex flex-col gap-2 w-36 py-3 bg-[#F5F5DC] text-[#2C1810] rounded border border-[#8B4513]">
                 <p
-                  onClick={() => navigate("/my-profile")}
+                  onClick={() => { navigate("/my-profile"); setShowProfileMenu(false); }}
                   className="cursor-pointer hover:text-[#8B4513] px-5"
                 >
                   Hồ sơ
                 </p>
                 <p
-                  onClick={() => navigate("/orders")}
+                  onClick={() => { navigate("/orders"); setShowProfileMenu(false); }}
                   className="cursor-pointer hover:text-[#8B4513] px-5"
                 >
                   Đơn hàng
                 </p>
                 <p
-                  onClick={HanleLogout}
+                  onClick={() => { HanleLogout(); setShowProfileMenu(false); }}
                   className="cursor-pointer hover:text-[#8B4513] px-5"
                 >
                   Đăng xuất

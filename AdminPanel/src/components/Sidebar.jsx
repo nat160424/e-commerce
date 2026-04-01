@@ -16,7 +16,7 @@ const Sidebar = () => {
       {/* Navigation Menu */}
       <nav className="flex flex-col gap-3">
         {isAuthenticated && <NavLink
-          to="/"
+          to="/admin"
           key="dashboard"
           className={({ isActive }) =>
             `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
