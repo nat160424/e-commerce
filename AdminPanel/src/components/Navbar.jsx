@@ -1,30 +1,37 @@
 import React, { useContext } from "react";
+import { Link } from "react-router-dom";
 import { assets } from "../assets/admin_assets/assets.js";
-import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
 const Navbar = () => {
-  const navigate = useNavigate();
-  const { setIsAuthenticated,logout } = useContext(AuthContext);
-
-  const onLogout = async () => {
-    await logout();
-  };
+  const { logout, user } = useContext(AuthContext);
 
   return (
-    <div className="flex items-center justify-between py-2 px-[4%] bg-gray-50">
-      <Link to="/admin" className="w-[max(10%,110px)]">
-        <img src={assets.logo} alt="logo" loading="lazy" />
+    <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm">
+      <Link to="/admin" className="flex items-center gap-3">
+        <img src={assets.logo} alt="logo" className="w-28" loading="lazy" />
+        <span className="hidden sm:block text-sm font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+          ADMIN
+        </span>
       </Link>
 
-      <p className="font-bold tracking-wider text-lg">ADMIN PANEL</p>
-      <button
-        onClick={onLogout}
-        className="bg-gray-800 text-white px-5 py-2 sm:py-2 rounded-full text-xs sm:text-sm"
-      >
-        Logout
-      </button>
-    </div>
+      <div className="flex items-center gap-4">
+        {user && (
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+              {user.name?.charAt(0)?.toUpperCase() || "A"}
+            </div>
+            <span className="text-sm text-gray-700 font-medium">{user.name}</span>
+          </div>
+        )}
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+        >
+          🚪 Đăng xuất
+        </button>
+      </div>
+    </header>
   );
 };
 

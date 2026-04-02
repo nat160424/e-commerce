@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap");
 @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Lobster&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Lobster&display=swap');
@@ -173,11 +173,11 @@
 }
 
 .slick-prev:before {
-  content: '←';
+  content: 'â†';
 }
 
 .slick-next:before {
-  content: '→';
+  content: 'â†’';
 }
 
 /* Dots Styles */
@@ -224,7 +224,7 @@
   left: 0;
   width: 20px;
   height: 20px;
-  content: '•';
+  content: 'â€¢';
   text-align: center;
   opacity: 0.4;
   color: black;
@@ -264,4 +264,12 @@
   .slick-next {
     display: none !important;
   }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in 0.4s ease-out;
 }

@@ -1,213 +1,218 @@
 import React, { useEffect, useState } from "react";
-import { backendUrl, currency } from "../App";
-import { toast, Zoom } from "react-toastify";
 import axios from "axios";
-import { assets } from "../assets/admin_assets/assets";
+import { toast } from "react-toastify";
+import { backendUrl, currency } from "../App";
 
-const Orders = ({ token }) => {
-  const [orders, setOrders] = useState([]);
+const STATUS_OPTIONS = [
+  { value: "pending",   label: "⏳ Chờ xác nhận" },
+  { value: "shipping",  label: "🚚 Đang giao" },
+  { value: "delivered", label: "✅ Đã giao" },
+  { value: "cancelled", label: "❌ Đã huỷ" },
+];
 
-  const fetchAllOrders = async () => {
-    if (!token) return;
+const STATUS_BADGE = {
+  pending:   "bg-yellow-100 text-yellow-700 border-yellow-200",
+  shipping:  "bg-blue-100 text-blue-700 border-blue-200",
+  delivered: "bg-green-100 text-green-700 border-green-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
+};
 
+const METHOD_LABEL = {
+  cod:     "COD",
+  card:    "Thẻ NH",
+  momo:    "MoMo",
+  zalopay: "ZaloPay",
+};
+
+const Orders = () => {
+  const [orders,  setOrders]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [updating, setUpdating] = useState(null);
+
+  const fetchOrders = async () => {
+    setLoading(true);
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/order/list`,
-        {},
-        {
-          headers: { 
-            'admintoken': token,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      if (response.data.success) {
-        console.log("Orders data:", response.data.orders);
-        setOrders(response.data.orders);
-      } else {
-        toast.error(response.data.message || "Failed to fetch orders.", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-          transition: Zoom,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to fetch all orders.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: false,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-        transition: Zoom,
+      const params = {};
+      if (filterStatus) params.status = filterStatus;
+      const res = await axios.get(`${backendUrl}/api/admin/orders`, {
+        withCredentials: true, params,
       });
+      if (res.data.success) {
+        const list = res.data.data || [];
+        setOrders(list.slice().reverse());
+      } else {
+        toast.error(res.data.message || "Không tải được đơn hàng");
+      }
+    } catch (err) {
+      toast.error("Lỗi tải đơn hàng: " + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAllOrders();
-  }, [token]);
+  useEffect(() => { fetchOrders(); }, [filterStatus]);
 
-  const statusHandler = async (e, orderId) => {
-    const newStatus = e.target.value;
-
+  const handleStatusChange = async (orderId, newStatus) => {
+    setUpdating(orderId);
     try {
-      const response = await axios.post(
-        `${backendUrl}/api/order/update-status`,
-        { orderId, status: newStatus },
-        {
-          headers: { 
-            'admintoken': token,
-            'Content-Type': 'application/json'
-          },
-        }
+      const res = await axios.put(
+        `${backendUrl}/api/admin/orders/${orderId}/status`,
+        { status: newStatus },
+        { withCredentials: true },
       );
-
-      if (response.data.success) {
-        await fetchAllOrders();
-        toast.success("Order status updated successfully!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-          transition: Zoom,
-        });
+      if (res.data.success) {
+        toast.success("Cập nhật trạng thái thành công");
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+        );
       } else {
-        toast.error(response.data.message || "Failed to update order status.", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: false,
-          pauseOnHover: false,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-          transition: Zoom,
-        });
+        toast.error(res.data.message || "Cập nhật thất bại");
       }
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      toast.error("Failed to update order status.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: false,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-      });
+    } catch (err) {
+      toast.error("Lỗi cập nhật: " + (err.response?.data?.message || err.message));
+    } finally {
+      setUpdating(null);
     }
   };
+
+  const formatDate = (raw) => {
+    if (!raw) return "—";
+    try { return new Date(raw).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }); }
+    catch { return raw; }
+  };
+
+  const formatMoney = (n) =>
+    typeof n === "number" ? n.toLocaleString("vi-VN") + currency : "—";
+
+  const filtered = orders.filter((o) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      o.id?.toLowerCase().includes(q) ||
+      o.user_id?.toLowerCase().includes(q) ||
+      (o.items || []).some((i) => i.name?.toLowerCase().includes(q))
+    );
+  });
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        📦 Order Details
-      </h2>
-
-      {orders.length > 0 ? (
-        <div className="grid gap-6">
-          {orders.map((order, index) => (
-            <div
-              key={order._id || index}
-              className="bg-white shadow-md border border-gray-200 rounded-lg p-5 transition duration-300 hover:shadow-lg hover:border-gray-300"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-[5fr_3fr_3fr_2fr_3fr] xl:grid-cols-[7fr_4fr_3.5fr_2fr_3.5fr] gap-4 items-start">
-                {/* Order Details */}
-                <div className="flex flex-col md:flex-row items-start gap-3">
-                  <img
-                    src={assets?.parcel_icon}
-                    alt="parcel icon"
-                    className="w-14 h-14 md:w-10 md:h-10 object-contain"
-                    loading="lazy"
-                  />
-                  <div className="w-full">
-                    {order.items?.map((item, idx) => (
-                      <p key={idx} className="text-sm text-gray-700">
-                        <span className="font-semibold">{item.name}</span> x{" "}
-                        {item.quantity} ({item.size})
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Customer Info */}
-                <div className="rounded-lg space-y-1">
-                  <p className="font-semibold text-gray-800 flex items-center gap-1">
-                    👤 Địa chỉ giao hàng
-                  </p>
-                  <p className="text-gray-600 text-sm flex items-center gap-1">
-                    📍 {order.address?.address}, {order.address?.commune}, {order.address?.district}, {order.address?.province}
-                  </p>
-                </div>
-
-                {/* Order Summary */}
-                <div className="space-y-1 text-sm">
-                  <p>
-                    🛍️ <span className="font-medium">Sản phẩm:</span>{" "}
-                    {order.items?.length || 0}
-                  </p>
-                  <p>
-                    💳 <span className="font-medium">Phương thức thanh toán:</span>{" "}
-                    {order.paymentMethod}
-                  </p>
-                  <p>
-                    ✅ <span className="font-medium">Thanh toán:</span>{" "}
-                    {order.payment ? "Đã thanh toán" : "Chưa thanh toán"}
-                  </p>
-                  <p>
-                    📅 <span className="font-medium">Ngày:</span>{" "}
-                    {new Date(order.date).toLocaleDateString()}
-                  </p>
-                </div>
-
-                {/* Order Amount */}
-                <div className="font-medium text-lg text-gray-700">
-                  {currency} {order.amount}
-                </div>
-
-                {/* Status Dropdown */}
-                <div className="-mt-1">
-                  <label className="text-sm font-medium text-gray-700">
-                    Trạng thái:
-                  </label>
-                  <select
-                    value={order.status}
-                    onChange={(e) => statusHandler(e, order._id)}
-                    className="w-full p-2 border rounded text-sm font-semibold bg-white hover:border-gray-400"
-                  >
-                    <option value="Order Placed">🛒 Đã đặt hàng</option>
-                    <option value="Packing">📦 Đang đóng gói</option>
-                    <option value="Shipped">🚚 Đang giao hàng</option>
-                    <option value="Out for Delivery">
-                      🚀 Đang giao hàng
-                    </option>
-                    <option value="Delivered">✅ Đã giao hàng</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          ))}
+    <div className="w-full">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">📦 Quản lý đơn hàng</h1>
+        <div className="flex gap-3">
+          <input
+            type="text" placeholder="Tìm kiếm đơn hàng..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-52"
+          />
+          <select
+            value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">Tất cả trạng thái</option>
+            {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <button onClick={fetchOrders}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">
+            Tải lại
+          </button>
         </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {STATUS_OPTIONS.map((s) => (
+          <div key={s.value} className={`p-3 rounded-xl border text-center ${STATUS_BADGE[s.value]}`}>
+            <p className="text-2xl font-bold">{orders.filter((o) => o.status === s.value).length}</p>
+            <p className="text-xs mt-0.5">{s.label.replace(/^[^ ]+ /, "")}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center items-center h-48 text-gray-500">Đang tải...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">Không có đơn hàng nào</div>
       ) : (
-        <p className="text-gray-600 text-center text-lg mt-10">
-          Không có đơn hàng nào. 📭
-        </p>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {["Mã ĐH", "Sản phẩm", "Khách hàng", "Thanh toán", "Tổng tiền", "Ngày đặt", "Trạng thái"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                    {/* Mã ĐH */}
+                    <td className="px-4 py-4">
+                      <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                        #{order.id?.slice(-8).toUpperCase()}
+                      </span>
+                    </td>
+
+                    {/* Sản phẩm */}
+                    <td className="px-4 py-4 max-w-[180px]">
+                      {(order.items || []).slice(0, 2).map((item, i) => (
+                        <p key={i} className="text-gray-700 truncate">
+                          {item.name} <span className="text-gray-400">×{item.quantity}</span>
+                        </p>
+                      ))}
+                      {(order.items || []).length > 2 && (
+                        <p className="text-gray-400 text-xs">+{order.items.length - 2} sản phẩm khác</p>
+                      )}
+                    </td>
+
+                    {/* Khách hàng */}
+                    <td className="px-4 py-4">
+                      <p className="text-gray-700 font-mono text-xs">{order.user_id?.slice(-8)}</p>
+                    </td>
+
+                    {/* Thanh toán */}
+                    <td className="px-4 py-4">
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
+                        {METHOD_LABEL[order.items?.[0]?.payment_method] || "—"}
+                      </span>
+                    </td>
+
+                    {/* Tổng tiền */}
+                    <td className="px-4 py-4 font-semibold text-gray-800">
+                      {formatMoney(order.total)}
+                    </td>
+
+                    {/* Ngày đặt */}
+                    <td className="px-4 py-4 text-gray-500 text-xs">{formatDate(order.created_at)}</td>
+
+                    {/* Trạng thái */}
+                    <td className="px-4 py-4">
+                      <select
+                        value={order.status || "pending"}
+                        onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                        disabled={updating === order.id}
+                        className={`text-xs font-medium px-2 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 ${STATUS_BADGE[order.status] || "bg-gray-100 text-gray-600"}`}
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+            Hiển thị {filtered.length} / {orders.length} đơn hàng
+          </div>
+        </div>
       )}
     </div>
   );

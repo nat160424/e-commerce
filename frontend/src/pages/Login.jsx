@@ -40,7 +40,8 @@ const HandleLogin = () => {
         });
         setIsAuthenticated(true);
       } else {
-        toast.error(response.data.message, {
+        //console.log(response);
+        toast.error(response.data.message || "Login failed!", {
           position: "top-center",
           autoClose: 1500,
           hideProgressBar: false,
@@ -52,7 +53,7 @@ const HandleLogin = () => {
         });
       }
     } catch (error) {
-      toast.error("Something went wrong. Please try again. " + error, {
+      toast.error(error.response.data.message, {
         position: "top-center",
         autoClose: 1500,
         hideProgressBar: false,

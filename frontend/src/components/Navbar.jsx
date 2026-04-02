@@ -1,182 +1,191 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState, useRef, useEffect } from "react";
 import { assets } from "../assets/frontend_assets/assets.js";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { ShopContext } from "../context/Shopcontext.jsx";
-import { useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import { Logout } from "../api/user";
 
-const Navbar = () => {
-  const [visible, setVisible] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const {
-    setShowSearch,
-    getCartCount,
-    navigate,
-    setCartItems,
-  } = useContext(ShopContext);
-  const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
-  const location = useLocation(); // Get the current location
+const NAV_LINKS = [
+  { path: "/",           label: "Trang chủ" },
+  { path: "/collection", label: "Bộ sưu tập" },
+  { path: "/about",      label: "Giới thiệu" },
+  { path: "/contact",    label: "Liên hệ" },
+];
 
-  const HanleLogout = async () => {
+const Navbar = () => {
+  const [menuOpen, setMenuOpen]         = useState(false);
+  const [profileOpen, setProfileOpen]   = useState(false);
+  const profileRef = useRef(null);
+
+  const { setShowSearch, getCartCount, navigate, setCartItems } = useContext(ShopContext);
+  const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);
+  const location = useLocation();
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handler = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleLogout = async () => {
     navigate("/");
-    const response = await Logout();
-    if (response.data.success) {
+    const res = await Logout();
+    if (res.data.success) {
       setIsAuthenticated(false);
       setCartItems({});
-      toast.success("Logged out successfully", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: false,
-      });
+      toast.success("Đăng xuất thành công", { position: "top-center", autoClose: 1500 });
     }
+    setProfileOpen(false);
   };
 
   return (
-    <div className="flex justify-between items-center font-medium py-3 shadow-gray-300 shadow-md px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw] bg-[#F5F5DC]">
-      <Link to="/">
-        <img src={assets.logo} className="w-36" alt="logo" />
-      </Link>
+    <header className="sticky top-0 z-40 bg-[#F5F5DC] shadow-md">
+      <div className="flex items-center justify-between py-3 px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]">
 
-      <ul className="hidden sm:flex gap-3 md:gap-5 lg:gap-8 text-base">
-        {[
-          { path: "/", label: "HOME" },
-          { path: "/collection", label: "COLLECTION" },
-          { path: "/about", label: "ABOUT" },
-          { path: "/contact", label: "CONTACT" },
-        ].map(({ path, label }) => (
-          <div key={path} className="flex flex-col items-center gap-1">
-            <NavLink
-              to={path}
-              className={`font-medium hover:text-[#8B4513] ${
-                location.pathname === path ? "text-[#2C1810]" : "text-[#2C1810]"
-              }`}
-            >
-              <p>{label}</p>
-            </NavLink>
-            <hr
-              className={`w-2/4 h-[1.6px] border-none ${
-                location.pathname === path ? "bg-[#8B4513]" : "bg-transparent"
-              }`}
-            />
-          </div>
-        ))}
-      </ul>
-
-      <div className="flex items-center gap-6">
-        <img
-          onClick={() => setShowSearch(true)}
-          src={assets.search_icon}
-          alt="searchIcon"
-          className="w-5 cursor-pointer hover:opacity-80"
-        />
-        <div className="relative">
-          <img
-            onClick={() => { if (!isAuthenticated) navigate("/login"); else setShowProfileMenu(!showProfileMenu); }}
-            src={assets.profile_icon}
-            alt="profile icon"
-            className="w-5 cursor-pointer hover:opacity-80"
-          />
-
-          {isAuthenticated && showProfileMenu && (
-            <div className="absolute dropdown-menu right-0 pt-4 z-20">
-              <div className="flex flex-col gap-2 w-36 py-3 bg-[#F5F5DC] text-[#2C1810] rounded border border-[#8B4513]">
-                <p
-                  onClick={() => { navigate("/my-profile"); setShowProfileMenu(false); }}
-                  className="cursor-pointer hover:text-[#8B4513] px-5"
-                >
-                  Hồ sơ
-                </p>
-                <p
-                  onClick={() => { navigate("/orders"); setShowProfileMenu(false); }}
-                  className="cursor-pointer hover:text-[#8B4513] px-5"
-                >
-                  Đơn hàng
-                </p>
-                <p
-                  onClick={() => { HanleLogout(); setShowProfileMenu(false); }}
-                  className="cursor-pointer hover:text-[#8B4513] px-5"
-                >
-                  Đăng xuất
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-        <Link to="/cart" className="relative">
-          <img src={assets.cart_icon} className="w-5 min-w-5 hover:opacity-80" alt="cart icon" />
-          <p className="absolute right-[-5px] bottom-[-5px] w-4 text-center leading-4 bg-[#8B4513] text-white rounded-full text-[8px] aspect-square">
-            {getCartCount()}
-          </p>
+        {/* Logo */}
+        <Link to="/" className="flex-shrink-0">
+          <img src={assets.logo} className="w-32 sm:w-36" alt="logo" />
         </Link>
-        <img
-          onClick={() => setVisible(true)}
-          src={assets.menu_icon}
-          alt="menu icon"
-          className="cursor-pointer sm:hidden w-5 hover:opacity-80"
-        />
-      </div>
 
-      <div
-        className={`absolute top-0 right-0 bottom-0 overflow-hidden bg-[#F5F5DC] transition-all ${
-          visible ? "w-3/4 duration-500 ease-in-out z-20" : "w-0"
-        }`}
-      >
-        <div className="flex flex-col text-[#2C1810]">
-          <div
-            onClick={() => setVisible(false)}
-            className="flex items-center gap-4 p-3 cursor-pointer hover:text-[#8B4513]"
-          >
-            <img
-              src={assets.dropdown_icon}
-              alt="dropdowm icon"
-              className="h-4 rotate-180"
-            />
-            <p>Quay lại</p>
+        {/* Desktop nav links */}
+        <nav className="hidden sm:flex items-center gap-1 md:gap-2 lg:gap-6">
+          {NAV_LINKS.map(({ path, label }) => {
+            const active = location.pathname === path;
+            return (
+              <NavLink
+                key={path} to={path}
+                className={`relative px-2 py-1 text-sm font-medium transition-colors hover:text-[#8B4513] ${
+                  active ? "text-[#8B4513]" : "text-[#2C1810]"
+                }`}
+              >
+                {label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#8B4513] rounded-full" />
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <button onClick={() => setShowSearch(true)} className="hover:opacity-70 transition-opacity">
+            <img src={assets.search_icon} alt="tìm kiếm" className="w-5" />
+          </button>
+
+          {/* Profile */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => isAuthenticated ? setProfileOpen((v) => !v) : navigate("/login")}
+              className="hover:opacity-70 transition-opacity"
+              title={isAuthenticated ? "Tài khoản" : "Đăng nhập"}
+            >
+              <img src={assets.profile_icon} alt="tài khoản" className="w-5" />
+            </button>
+
+            {isAuthenticated && profileOpen && (
+              <div className="absolute right-0 mt-3 w-44 bg-[#F5F5DC] border border-[#c8a882] rounded-xl shadow-lg py-2 z-50">
+                <button
+                  onClick={() => { navigate("/my-profile"); setProfileOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-[#2C1810] hover:bg-[#e8dcc8] transition-colors"
+                >
+                  👤 Hồ sơ của tôi
+                </button>
+                <button
+                  onClick={() => { navigate("/orders"); setProfileOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-[#2C1810] hover:bg-[#e8dcc8] transition-colors"
+                >
+                  📦 Đơn hàng của tôi
+                </button>
+                <hr className="my-1 border-[#c8a882]" />
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  🚪 Đăng xuất
+                </button>
+              </div>
+            )}
           </div>
 
-          <NavLink
-            onClick={() => {
-              setVisible(false);
-            }}
-            to="/"
-            className="py-2 pl-6 border-b border-[#8B4513] hover:text-[#8B4513]"
-          >
-            <p>HOME</p>
-          </NavLink>
-          <NavLink
-            onClick={() => {
-              setVisible(false);
-            }}
-            to="/collection"
-            className="py-2 pl-6 border-b border-[#8B4513] hover:text-[#8B4513]"
-          >
-            <p>COLLECTION</p>
-          </NavLink>
-          <NavLink
-            onClick={() => {
-              setVisible(false);
-            }}
-            to="/about"
-            className="py-2 pl-6 border-b border-[#8B4513] hover:text-[#8B4513]"
-          >
-            <p>ABOUT US</p>
-          </NavLink>
-          <NavLink
-            onClick={() => {
-              setVisible(false);
-            }}
-            to="/contact"
-            className="py-2 pl-6 border-b border-[#8B4513] hover:text-[#8B4513]"
-          >
-            <p>CONTACT</p>
-          </NavLink>
+          {/* Cart */}
+          <Link to="/cart" className="relative hover:opacity-70 transition-opacity">
+            <img src={assets.cart_icon} className="w-5" alt="giỏ hàng" />
+            {getCartCount() > 0 && (
+              <span className="absolute -right-1.5 -bottom-1.5 w-4 h-4 flex items-center justify-center bg-[#8B4513] text-white rounded-full text-[8px] font-bold">
+                {getCartCount() > 99 ? "99+" : getCartCount()}
+              </span>
+            )}
+          </Link>
+
+          {/* Mobile menu toggle */}
+          <button onClick={() => setMenuOpen(true)} className="sm:hidden hover:opacity-70">
+            <img src={assets.menu_icon} alt="menu" className="w-5" />
+          </button>
         </div>
       </div>
-    </div>
+
+      {/* Mobile drawer */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <div className="w-72 bg-[#F5F5DC] h-full flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#c8a882]">
+              <img src={assets.logo} className="w-28" alt="logo" />
+              <button onClick={() => setMenuOpen(false)} className="text-[#2C1810] text-xl">✕</button>
+            </div>
+
+            <nav className="flex flex-col px-4 py-4 gap-1">
+              {NAV_LINKS.map(({ path, label }) => (
+                <NavLink key={path} to={path}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      isActive ? "bg-[#8B4513] text-white" : "text-[#2C1810] hover:bg-[#e8dcc8]"
+                    }`
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+
+            <hr className="mx-4 border-[#c8a882]" />
+
+            <div className="flex flex-col px-4 py-4 gap-1">
+              {isAuthenticated ? (
+                <>
+                  <button onClick={() => { navigate("/my-profile"); setMenuOpen(false); }}
+                    className="px-4 py-3 rounded-lg text-sm text-left text-[#2C1810] hover:bg-[#e8dcc8]">
+                    👤 Hồ sơ của tôi
+                  </button>
+                  <button onClick={() => { navigate("/orders"); setMenuOpen(false); }}
+                    className="px-4 py-3 rounded-lg text-sm text-left text-[#2C1810] hover:bg-[#e8dcc8]">
+                    📦 Đơn hàng của tôi
+                  </button>
+                  <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                    className="px-4 py-3 rounded-lg text-sm text-left text-red-600 hover:bg-red-50">
+                    🚪 Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { navigate("/login"); setMenuOpen(false); }}
+                  className="px-4 py-3 rounded-lg text-sm font-medium bg-[#8B4513] text-white text-center">
+                  Đăng nhập
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
   );
 };
 

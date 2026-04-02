@@ -12,8 +12,8 @@ import AddProduct from "./pages/AddProduct";
 import Users from "./pages/Users";
 import { AuthContext } from "./context/AuthContext";
 
-export const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
-export const currency = "VNĐ";
+export const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8081";
+export const currency = " VND";
 
 const App = () => {
   const { isAuthenticated, setIsAuthenticated } = useContext(AuthContext);

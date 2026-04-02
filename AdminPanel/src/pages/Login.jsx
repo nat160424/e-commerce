@@ -1,93 +1,79 @@
-import React, { useState, useContext, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast, Zoom } from "react-toastify";
+import React, { useState, useContext } from "react";
+import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
-
-const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "";
-const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "";
+import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const { setIsAuthenticated, login, getProfile } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
 
-  useEffect(() => {
-    if (adminEmail && adminPassword) {
-      setEmail(adminEmail);
-      setPassword(adminPassword);
-    }
-  }, []);
+  const [email,    setEmail]    = useState(import.meta.env.VITE_ADMIN_EMAIL    || "");
+  const [password, setPassword] = useState(import.meta.env.VITE_ADMIN_PASSWORD || "");
+  const [loading,  setLoading]  = useState(false);
 
-  const onSubmitHandler = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const loginResponse = await login(email, password);
-      const profileResponse = await getProfile();
-      if (profileResponse?.data?.data?.role !== "admin") {
-        setIsAuthenticated(false);
-        toast.error("You are not authorized to access this page", {
-          position: "top-center",
-          autoClose: 1500,
-          transition: Zoom,
-        });
-        return;
-      }
-      if (loginResponse?.data?.success && profileResponse?.data?.success) {
-        setIsAuthenticated(true);
+      const result = await login(email, password);
+      if (result.success) {
+        toast.success("Đăng nhập thành công!", { position: "top-center", autoClose: 1200 });
         navigate("/admin");
-        setEmail("");
-        setPassword("");
-        toast.success("Login successful!", {
-          position: "top-center",
-          autoClose: 1500,
-          transition: Zoom,
-        });
+      } else {
+        toast.error(result.message || "Đăng nhập thất bại", { position: "top-center", autoClose: 2500 });
       }
-    } catch (error) {
-      setIsAuthenticated(false);
-      toast.error("Login failed", {
-        position: "top-center",
-        autoClose: 1500,
-        transition: Zoom,
-      });
+    } catch {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại", { position: "top-center", autoClose: 2000 });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={onSubmitHandler}
-        className="bg-white p-8 rounded shadow-md w-full max-w-sm"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center">Admin Login</h2>
-        <div className="mb-4">
-          <label className="block mb-1 font-semibold">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-2xl">🛡️</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+          <p className="text-sm text-gray-500 mt-1">Chỉ dành cho quản trị viên</p>
         </div>
-        <div className="mb-6">
-          <label className="block mb-1 font-semibold">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-gray-800 text-white py-2 rounded hover:bg-gray-700"
-        >
-          Login
-        </button>
-      </form>
+
+        <form onSubmit={onSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <input
+              type="email" required value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Mật khẩu</label>
+            <input
+              type="password" required value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+            />
+          </div>
+
+          <button
+            type="submit" disabled={loading}
+            className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+          >
+            {loading ? "Đang xác thực..." : "Đăng nhập"}
+          </button>
+        </form>
+
+        <p className="text-xs text-gray-400 text-center mt-6">
+          Tài khoản không có quyền admin sẽ bị từ chối
+        </p>
+      </div>
     </div>
   );
 };

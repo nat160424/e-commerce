@@ -1,96 +1,64 @@
 import React, { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import {
-  FaTachometerAlt,
-  FaPlus,
-  FaList,
-  FaShoppingCart,
-  FaUsers,
-} from "react-icons/fa";
 import { AuthContext } from "../context/AuthContext";
 
+const NAV_ITEMS = [
+  { to: "/admin",            icon: "📊", label: "Dashboard" },
+  { to: "/admin/orders",     icon: "📦", label: "Đơn hàng" },
+  { to: "/admin/users",      icon: "👥", label: "Người dùng" },
+  { to: "/admin/list-items", icon: "📋", label: "Sản phẩm" },
+  { to: "/admin/add-item",   icon: "➕", label: "Thêm sản phẩm" },
+];
+
 const Sidebar = () => {
-  const { isAuthenticated } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
+
   return (
-    <div className="w-[20%] min-h-screen bg-white shadow-md border-r border-gray-200 p-5">
-      {/* Navigation Menu */}
-      <nav className="flex flex-col gap-3">
-        {isAuthenticated && <NavLink
-          to="/admin"
-          key="dashboard"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
-              isActive
-                ? "bg-blue-500 text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
-            }`
-          }
-        >
-          <FaTachometerAlt className="w-5 h-5 shrink-0" />
-          <p className="hidden md:block">Dashboard</p>
-        </NavLink>}
+    <aside className="w-[220px] min-h-screen bg-white border-r border-gray-200 flex flex-col">
+      {/* User info */}
+      {user && (
+        <div className="px-4 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user.name?.charAt(0)?.toUpperCase() || "A"}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">{user.name}</p>
+              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+            </div>
+          </div>
+          <span className="mt-2 inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+            Quản trị viên
+          </span>
+        </div>
+      )}
 
-        <NavLink
-          to="/admin/add-item"
-          key="add-item"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
-              isActive
-                ? "bg-blue-500 text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
-            }`
-          }
-        >
-          <FaPlus className="w-5 h-5 shrink-0" />
-          <p className="hidden md:block">Add Items</p>
-        </NavLink>
-
-        <NavLink
-          to="/admin/list-items"
-          key="list-items"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
-              isActive
-                ? "bg-blue-500 text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
-            }`
-          }
-        >
-          <FaList className="w-5 h-5 shrink-0" />
-          <p className="hidden md:block">List Items</p>
-        </NavLink>
-
-        <NavLink
-          to="/admin/orders"
-          key="orders"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
-              isActive
-                ? "bg-blue-500 text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
-            }`
-          }
-        >
-          <FaShoppingCart className="w-5 h-5 shrink-0" />
-          <p className="hidden md:block">Orders</p>
-        </NavLink>
-
-        <NavLink
-          to="/admin/users"
-          key="users"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-md transition duration-300 ${
-              isActive
-                ? "bg-blue-500 text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-500"
-            }`
-          }
-        >
-          <FaUsers className="w-5 h-5 shrink-0" />
-          <p className="hidden md:block">Users</p>
-        </NavLink>
+      {/* Nav links */}
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {NAV_ITEMS.map(({ to, icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === "/admin"}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`
+            }
+          >
+            <span className="text-base">{icon}</span>
+            <span>{label}</span>
+          </NavLink>
+        ))}
       </nav>
-    </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <p className="text-xs text-gray-400 text-center">Admin Panel v1.0</p>
+      </div>
+    </aside>
   );
 };
 

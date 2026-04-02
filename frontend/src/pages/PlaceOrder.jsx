@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import Title from "../components/Title";
 import CartTotal from "../components/CartTotal";
+import PaymentModal from "../components/PaymentModal";
 import { useLocation } from "react-router-dom";
 import { ShopContext } from "../context/Shopcontext";
 import { backendUrl } from "../api/axiosInstance";
@@ -9,220 +10,135 @@ import { toast } from "react-toastify";
 import Select from "react-select";
 
 const PlaceOrder = () => {
-  const [method, setMethod] = useState("cod");
   const {
-    cartItems,
-    setCartItems,
-    getCartAmount,
-    delivery_fee,
-    products,
-    navigate,
-    loading,
-    setLoading,
-    updateQuantity,
-    currency
+    cartItems, setCartItems,
+    getCartAmount, delivery_fee,
+    products, navigate, loading, setLoading,
+    updateQuantity, currency,
   } = useContext(ShopContext);
 
   const location = useLocation();
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [communes, setCommunes] = useState([]);
+
+  const [provinces, setProvinces]   = useState([]);
+  const [districts, setDistricts]   = useState([]);
+  const [communes,  setCommunes]    = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    province: null,
-    district: null,
-    commune: null,
-    address: ""
+    firstName: "", lastName: "",
+    email: "", phone: "",
+    province: null, district: null, commune: null,
+    address: "",
+    note: "",
+    nationalId: "",
+    dateOfBirth: "",
   });
 
-  // Process cart items for display
   const [cartData, setCartData] = useState([]);
 
   useEffect(() => {
     if (products.length > 0 && Array.isArray(cartItems)) {
-      const tempData = cartItems
-        .filter((item) => item.quantity > 0)
-        .map((item) => ({
-          _id: item.product_id,
-          size: item.size,
-          quantity: item.quantity
-        }));
-      setCartData(tempData);
+      setCartData(cartItems.filter((i) => i.quantity > 0).map((i) => ({
+        _id: i.product_id, size: i.size, quantity: i.quantity,
+      })));
     }
   }, [cartItems, products]);
 
-  // Get product image URL
-  const getImageUrl = (imageId) => {
-    if (!imageId) return '';
-    return `${backendUrl}/api/product/image/${imageId}`;
-  };
+  const getImageUrl = (id) =>
+    id ? `${backendUrl}/api/product/image/${id}` : "";
 
-  // Fetch provinces on component mount
+  // ── Địa chỉ hành chính ─────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchProvinces = async () => {
-      try {
-        const response = await axios.get(
-          `https://provinces.open-api.vn/api/p/`
-        );
-        const provinceOptions = response.data.map((province) => ({
-          label: province.name,
-          value: province.code
-        }));
-        setProvinces(provinceOptions);
-      } catch (error) {
-        console.error("Error fetching provinces:", error);
-        toast.error("Không thể tải danh sách tỉnh/thành phố");
-      }
-    };
-    fetchProvinces();
+    axios.get("https://provinces.open-api.vn/api/p/")
+      .then((r) => setProvinces(r.data.map((p) => ({ label: p.name, value: p.code }))))
+      .catch(() => toast.error("Không tải được danh sách tỉnh/thành phố"));
   }, []);
 
-  // Fetch districts when province changes
-  const handleProvinceChange = async (selectedOption) => {
-    setFormData({
-      ...formData,
-      province: selectedOption,
-      district: null,
-      commune: null
-    });
-
-    try {
-      const response = await axios.get(
-        `https://provinces.open-api.vn/api/p/${selectedOption.value}?depth=2`
-      );
-      const districtOptions = response.data.districts.map((district) => ({
-        label: district.name,
-        value: district.code
-      }));
-      setDistricts(districtOptions);
-    } catch (error) {
-      console.error("Error fetching districts:", error);
-      toast.error("Không thể tải danh sách quận/huyện");
-    }
+  const handleProvinceChange = async (opt) => {
+    setFormData((f) => ({ ...f, province: opt, district: null, commune: null }));
+    const r = await axios.get(`https://provinces.open-api.vn/api/p/${opt.value}?depth=2`);
+    setDistricts(r.data.districts.map((d) => ({ label: d.name, value: d.code })));
+    setCommunes([]);
   };
 
-  // Fetch communes when district changes
-  const handleDistrictChange = async (selectedOption) => {
-    setFormData({
-      ...formData,
-      district: selectedOption,
-      commune: null
-    });
-
-    try {
-      const response = await axios.get(
-        `https://provinces.open-api.vn/api/d/${selectedOption.value}?depth=2`
-      );
-      const communeOptions = response.data.wards.map((commune) => ({
-        label: commune.name,
-        value: commune.code
-      }));
-      setCommunes(communeOptions);
-    } catch (error) {
-      console.error("Error fetching communes:", error);
-      toast.error("Không thể tải danh sách phường/xã");
-    }
+  const handleDistrictChange = async (opt) => {
+    setFormData((f) => ({ ...f, district: opt, commune: null }));
+    const r = await axios.get(`https://provinces.open-api.vn/api/d/${opt.value}?depth=2`);
+    setCommunes(r.data.wards.map((w) => ({ label: w.name, value: w.code })));
   };
 
-  // Handle commune selection
-  const handleCommuneChange = (selectedOption) => {
-    setFormData({
-      ...formData,
-      commune: selectedOption
-    });
-  };
+  const handleChange = (e) =>
+    setFormData((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  // Handle input change for text fields
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
-  };
-
-  const onSubmitHandler = async (e) => {
+  // ── Validate form & mở modal thanh toán ────────────────────────────────────
+  const onSubmitHandler = (e) => {
     e.preventDefault();
-    
-    // Validate cart items
-    if (!cartData || cartData.length === 0) {
-      toast.error("Giỏ hàng của bạn đang trống!");
-      navigate("/cart");
-      return;
-    }
-    
-    // Validate location selection
+    if (!cartData.length) { toast.error("Giỏ hàng đang trống!"); navigate("/cart"); return; }
     if (!formData.province || !formData.district || !formData.commune) {
-      toast.error("Vui lòng chọn đầy đủ địa chỉ (Tỉnh/Thành phố, Quận/Huyện, Phường/Xã)");
-      return;
+      toast.error("Vui lòng chọn đầy đủ Tỉnh / Quận / Phường"); return;
     }
+    setShowPaymentModal(true);
+  };
 
+  // ── Gửi đơn hàng sau khi xác nhận thanh toán ───────────────────────────────
+  const handlePaymentConfirm = async (paymentData) => {
     setLoading(true);
-
     try {
-      // Prepare order items from cart data
-      let orderItems = [];
-      
-      if (Array.isArray(cartItems)) {
-        cartItems.forEach(item => {
-          const itemInfo = products.find((product) => product._id === item.product_id);
-          if (itemInfo && item.quantity > 0) {
-            orderItems.push({
-              ...itemInfo,
-              size: item.size,
-              quantity: item.quantity
-            });
-          }
-        });
-      }
+      // Chuẩn hoá items đúng format backend
+      const orderItems = cartData
+        .map((item) => {
+          const p = products.find((x) => x._id === item._id);
+          if (!p) return null;
+          return { product_id: item._id, name: p.name, quantity: item.quantity, price: p.price };
+        })
+        .filter(Boolean);
 
-      const fullAddress = {
-        province: formData.province.label,
-        district: formData.district.label,
-        commune: formData.commune.label,
-        address: formData.address
-      };
+      const fullAddress = [
+        formData.address,
+        formData.commune?.label,
+        formData.district?.label,
+      ].filter(Boolean).join(", ");
 
-      let orderData = {
-        address: fullAddress,
+      const payload = {
         items: orderItems,
-        amount: getCartAmount() + delivery_fee,
+        shipment: {
+          full_name:    `${formData.firstName} ${formData.lastName}`.trim(),
+          phone:        formData.phone,
+          email:        formData.email,
+          address:      fullAddress,
+          province:     formData.province?.label || "",
+          note:         formData.note,
+          national_id:  formData.nationalId,
+          date_of_birth: formData.dateOfBirth,
+          payment_data: { ...paymentData, amount: getCartAmount() + delivery_fee },
+        },
       };
 
-      switch (method) {
-        case "cod":
-          const response = await axios.post(
-            `${backendUrl}/api/orders`,
-            orderData,
-            { withCredentials: true }
-          );
-          if (response.data.success) {
-            setCartItems([]);
-            localStorage.removeItem("guestCart");
-            toast.success("Đặt hàng thành công!");
-            navigate("/orders");
-          } else {
-            toast.error(response.data.message);
-          }
-          break;
-        default:
-          break;
+      const res = await axios.post(`${backendUrl}/api/orders`, payload, { withCredentials: true });
+      if (res.data.success) {
+        setCartItems([]);
+        localStorage.removeItem("guestCart");
+        setShowPaymentModal(false);
+        toast.success("Đặt hàng thành công!");
+        navigate("/orders");
+      } else {
+        toast.error(res.data.message || "Đặt hàng thất bại");
       }
-    } catch (error) {
-      console.error("Order submission error:", error);
-      toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra khi đặt hàng");
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Có lỗi xảy ra khi đặt hàng");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    setLoading(false);
-  }, [location.pathname]);
+  useEffect(() => { setLoading(false); }, [location.pathname]);
+
+  const selectStyles = {
+    control: (base) => ({
+      ...base, minHeight: "48px",
+      borderColor: "#D1D5DB", "&:hover": { borderColor: "#F59E0B" },
+    }),
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -233,241 +149,131 @@ const PlaceOrder = () => {
 
         <form onSubmit={onSubmitHandler}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Column - Delivery Information */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                  Thông tin giao hàng
-                </h2>
-                
-                {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    placeholder="Họ"
-                    onChange={handleChange}
-                    className="border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    placeholder="Tên"
-                    onChange={handleChange}
-                    className="border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+
+            {/* ── Cột trái: thông tin giao hàng ── */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-base font-semibold text-gray-900 mb-5">Thông tin giao hàng</h2>
+
+                {/* Họ tên */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <input name="firstName" value={formData.firstName} onChange={handleChange}
+                    placeholder="Họ" required
+                    className="border border-gray-300 rounded-lg py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <input name="lastName" value={formData.lastName} onChange={handleChange}
+                    placeholder="Tên" required
+                    className="border border-gray-300 rounded-lg py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
 
-                {/* Contact Information */}
+                {/* Email + SĐT */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    placeholder="Địa chỉ email"
-                    onChange={handleChange}
-                    className="border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    placeholder="Số điện thoại"
-                    onChange={handleChange}
-                    className="border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+                  <input name="email" type="email" value={formData.email} onChange={handleChange}
+                    placeholder="Email" required
+                    className="border border-gray-300 rounded-lg py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <input name="phone" type="tel" value={formData.phone} onChange={handleChange}
+                    placeholder="Số điện thoại" required
+                    className="border border-gray-300 rounded-lg py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
 
-                {/* Location Selection */}
+                {/* Tỉnh / Quận / Phường */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <Select
-                    placeholder="Chọn Tỉnh/Thành phố"
-                    value={formData.province}
-                    options={provinces}
-                    onChange={handleProvinceChange}
-                    className="w-full"
-                    isSearchable
-                    required
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        minHeight: '48px',
-                        borderColor: '#D1D5DB',
-                        '&:hover': { borderColor: '#3B82F6' }
-                      })
-                    }}
-                  />
-
-                  <Select
-                    placeholder="Chọn Quận/Huyện"
-                    value={formData.district}
-                    options={districts}
-                    onChange={handleDistrictChange}
-                    className="w-full"
-                    isSearchable
-                    isDisabled={!formData.province}
-                    required
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        minHeight: '48px',
-                        borderColor: '#D1D5DB',
-                        '&:hover': { borderColor: '#3B82F6' }
-                      })
-                    }}
-                  />
-
-                  <Select
-                    placeholder="Chọn Phường/Xã"
-                    value={formData.commune}
+                  <Select placeholder="Tỉnh/Thành phố" value={formData.province}
+                    options={provinces} onChange={handleProvinceChange}
+                    isSearchable styles={selectStyles} />
+                  <Select placeholder="Quận/Huyện" value={formData.district}
+                    options={districts} onChange={handleDistrictChange}
+                    isSearchable isDisabled={!formData.province} styles={selectStyles} />
+                  <Select placeholder="Phường/Xã" value={formData.commune}
                     options={communes}
-                    onChange={handleCommuneChange}
-                    className="w-full"
-                    isSearchable
-                    isDisabled={!formData.district}
-                    required
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        minHeight: '48px',
-                        borderColor: '#D1D5DB',
-                        '&:hover': { borderColor: '#3B82F6' }
-                      })
-                    }}
-                  />
+                    onChange={(opt) => setFormData((f) => ({ ...f, commune: opt }))}
+                    isSearchable isDisabled={!formData.district} styles={selectStyles} />
                 </div>
 
-                {/* Detailed Address */}
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  placeholder="Số nhà, tên đường"
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-                  required
-                />
+                {/* Địa chỉ chi tiết */}
+                <input name="address" value={formData.address} onChange={handleChange}
+                  placeholder="Số nhà, tên đường" required
+                  className="border border-gray-300 rounded-lg py-3 px-4 text-sm w-full mb-4 focus:outline-none focus:ring-2 focus:ring-amber-400" />
 
-                {/* Payment Method */}
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Phương thức thanh toán
-                  </h3>
-                  <div
-                    onClick={() => setMethod("cod")}
-                    className={`flex items-center gap-3 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      method === "cod" 
-                        ? "border-green-500 bg-green-50" 
-                        : "border-gray-300 hover:border-gray-400"
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 border-2 rounded-full flex items-center justify-center ${
-                        method === "cod" ? "border-green-500" : "border-gray-300"
-                      }`}
-                    >
-                      {method === "cod" && (
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      )}
-                    </div>
-                    <p className="text-gray-700 font-medium">
-                      Thanh toán khi nhận hàng (COD)
-                    </p>
+                {/* Ghi chú */}
+                <textarea name="note" value={formData.note} onChange={handleChange}
+                  placeholder="Ghi chú đơn hàng (không bắt buộc)" rows={2}
+                  className="border border-gray-300 rounded-lg py-3 px-4 text-sm w-full resize-none focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+
+              {/* ── Thông tin xác minh (tuỳ chọn) ── */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">Xác minh danh tính</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Dùng để xác minh khi giao hàng giá trị cao (không bắt buộc)</p>
+                  </div>
+                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Tuỳ chọn</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">CCCD / CMND</label>
+                    <input name="nationalId" value={formData.nationalId} onChange={handleChange}
+                      placeholder="012345678901"
+                      className="border border-gray-300 rounded-lg py-3 px-4 text-sm w-full focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Ngày sinh</label>
+                    <input name="dateOfBirth" type="date" value={formData.dateOfBirth} onChange={handleChange}
+                      className="border border-gray-300 rounded-lg py-3 px-4 text-sm w-full focus:outline-none focus:ring-2 focus:ring-amber-400" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Order Summary */}
+            {/* ── Cột phải: tóm tắt đơn hàng ── */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                  Đơn hàng của bạn
-                </h2>
+              <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
+                <h2 className="text-base font-semibold text-gray-900 mb-5">Đơn hàng của bạn</h2>
 
-                {/* Cart Items */}
-                <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                  {cartData.length > 0 ? (
-                    cartData.map((item, index) => {
-                      const productData = products.find(
-                        (product) => product._id === item._id
-                      );
-                      
-                      if (!productData) return null;
-
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg"
-                        >
-                          <img
-                            className="w-16 h-16 object-cover rounded-md"
-                            src={getImageUrl(productData.images?.[0])}
-                            alt={productData.name}
-                            onError={(e) => {
-                              e.target.src = "https://png.pngtree.com/png-vector/20190820/ourmid/pngtree-no-image-vector-illustration-isolated-png-image_1694547.jpg";
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
-                              {productData.name}
-                            </h4>
-                            <p className="text-sm text-gray-500">
-                              Size: {item.size}
-                            </p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {productData.price} {currency}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const newQuantity = parseInt(e.target.value) || 1;
-                                updateQuantity(item._id, item.size, newQuantity);
-                              }}
-                              className="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
+                {/* Danh sách sản phẩm */}
+                <div className="space-y-3 mb-5 max-h-80 overflow-y-auto pr-1">
+                  {cartData.length > 0 ? cartData.map((item, idx) => {
+                    const p = products.find((x) => x._id === item._id);
+                    if (!p) return null;
+                    return (
+                      <div key={idx} className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg">
+                        <img
+                          className="w-14 h-14 object-cover rounded-lg flex-shrink-0"
+                          src={getImageUrl(p.images?.[0])}
+                          alt={p.name}
+                          onError={(e) => { e.target.src = "https://png.pngtree.com/png-vector/20190820/ourmid/pngtree-no-image-vector-illustration-isolated-png-image_1694547.jpg"; }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                          <p className="text-xs text-gray-500">Size: {item.size}</p>
+                          <p className="text-sm font-semibold text-amber-700">{p.price?.toLocaleString("vi-VN")}{currency}</p>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">Giỏ hàng trống</p>
-                    </div>
+                        <input
+                          type="number" min="1" value={item.quantity}
+                          onChange={(e) => updateQuantity(item._id, item.size, parseInt(e.target.value) || 1)}
+                          className="w-14 text-center border border-gray-300 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        />
+                      </div>
+                    );
+                  }) : (
+                    <p className="text-center text-gray-400 py-8 text-sm">Giỏ hàng trống</p>
                   )}
                 </div>
 
-                {/* Order Total */}
-                <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-gray-100 pt-4">
                   <CartTotal />
                 </div>
 
-                {/* Place Order Button */}
                 <button
                   type="submit"
-                  className={`w-full mt-6 py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-                    loading || cartData.length === 0
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700"
-                  }`}
-                  disabled={loading || cartData.length === 0}
+                  disabled={loading || !cartData.length}
+                  className="w-full mt-5 py-3 rounded-xl font-semibold text-sm text-white transition-colors bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Đang xử lý..." : "ĐẶT HÀNG"}
+                  {loading ? "Đang xử lý..." : "Tiến hành thanh toán →"}
                 </button>
 
-                <p className="text-xs text-gray-500 text-center mt-3">
-                  Bằng việc đặt hàng, bạn đồng ý với điều khoản sử dụng của chúng tôi
+                <p className="text-xs text-gray-400 text-center mt-3">
+                  Bằng việc đặt hàng, bạn đồng ý với điều khoản sử dụng
                 </p>
               </div>
             </div>
@@ -475,6 +281,16 @@ const PlaceOrder = () => {
           </div>
         </form>
       </div>
+
+      {/* Popup thanh toán */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        totalAmount={getCartAmount() + delivery_fee}
+        currency={currency}
+        onClose={() => setShowPaymentModal(false)}
+        onConfirm={handlePaymentConfirm}
+        loading={loading}
+      />
     </div>
   );
 };
