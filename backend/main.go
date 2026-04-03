@@ -15,37 +15,40 @@ import (
 )
 
 func main() {
-
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("No .env file found, using system environment variables")
 	}
 
 	if os.Getenv("ENV") == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
 		log.Fatal("MONGODB_URI is not set in environment variables")
 	}
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	clientOpts := options.Client().
+		ApplyURI(mongoURI).
+		SetServerSelectionTimeout(25 * time.Second).
+		SetConnectTimeout(25 * time.Second)
+
+	client, err := mongo.Connect(context.Background(), clientOpts)
 	if err != nil {
 		log.Fatal("Error connecting to MongoDB:", err)
 	}
+	defer client.Disconnect(context.Background())
 
-	if err := client.Ping(ctx, nil); err != nil {
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer pingCancel()
+	if err := client.Ping(pingCtx, nil); err != nil {
 		log.Fatal("Error pinging MongoDB:", err)
 	}
-
 	log.Println("Connected to MongoDB!")
 
 	dbName := os.Getenv("MONGODB_DB")
 	if dbName == "" {
-		dbName = "ecommerce" // default database name
+		dbName = "ecommerce"
 	}
 
 	db := client.Database(dbName)
@@ -55,13 +58,18 @@ func main() {
 	}
 
 	r := gin.Default()
-	if err := r.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+
+	// Trust nginx container on Docker bridge network (private RFC-1918 ranges)
+	if err := r.SetTrustedProxies([]string{
+		"127.0.0.1",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+	}); err != nil {
 		log.Fatal("Error setting trusted proxies:", err)
 	}
 
-	// Serve static files from uploads directory
 	r.Static("/uploads", "./uploads")
-
 	routes.SetupRoutes(r, db)
 
 	port := os.Getenv("PORT")

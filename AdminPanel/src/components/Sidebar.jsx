@@ -3,11 +3,12 @@ import { NavLink } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
 const NAV_ITEMS = [
-  { to: "/admin",            icon: "📊", label: "Dashboard" },
-  { to: "/admin/orders",     icon: "📦", label: "Đơn hàng" },
-  { to: "/admin/users",      icon: "👥", label: "Người dùng" },
-  { to: "/admin/list-items", icon: "📋", label: "Sản phẩm" },
-  { to: "/admin/add-item",   icon: "➕", label: "Thêm sản phẩm" },
+  { to: "/admin",                icon: "📊", label: "Dashboard" },
+  { to: "/admin/orders",         icon: "📦", label: "Đơn hàng" },
+  { to: "/admin/users",          icon: "👤", label: "Người dùng" },
+  { to: "/admin/list-items",     icon: "📋", label: "Sản phẩm" },
+  { to: "/admin/add-item",       icon: "➕", label: "Thêm sản phẩm" },
+  { to: "/admin/api-management", icon: "🔌", label: "Quản lý API" },
 ];
 
 const Sidebar = () => {

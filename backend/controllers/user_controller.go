@@ -96,6 +96,21 @@ func (c *UserController) Login(ctx *gin.Context) {
 // 	ctx.JSON(http.StatusOK, gin.H{"message": "Password reset email sent"})
 // }
 
+func (c *UserController) GetUserProfile(ctx *gin.Context) {
+	userIDStr := ctx.Param("id")
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid user ID"))
+		return
+	}
+	user, err := c.userService.GetUserByID(userID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, models.NewErrorResponse(utils.MessageUserIDNotFound))
+		return
+	}
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(user, utils.MessageFetchUserSuccess))
+}
+
 func (c *UserController) GetProfile(ctx *gin.Context) {
 	userIDStr := ctx.GetString("userID")
 	userID, err := primitive.ObjectIDFromHex(userIDStr)
