@@ -1,20 +1,7 @@
-# 🛒 Simple E-commerce Platform
+# 🛒 Data Leakage Incident Handling in E-commerce Platform
 
-A simple full-stack e-commerce platform built with modern technologies, featuring a customer shopping interface and robust backend services.
+This project demonstrates how data leakage incidents can occur in a web-based e-commerce system and how to detect, analyze, and mitigate such security issues.
 
-## ✨ Features
-
-![Achitecture](./assets/architecture_img.png)
-
-### 🛍️ Customer Features
-- Browse products by categories and price ranges
-- Advanced search and filtering
-- Shopping cart with guest support
-- User authentication and profiles
-- Order management and tracking
-- Responsive design for all devices
-- Choose address from list <Vietnamese> 
-- Cash on Delivery payment
 
 ### 🔧 Technical Features
 - RESTful API with JWT authentication
@@ -50,3 +37,11 @@ A simple full-stack e-commerce platform built with modern technologies, featurin
 - Storage and handle token in cookie
 - Input validation
 - SSL/TLS encryption (just for demo, this project use openssl to generate self-signed certificate)
+
+## 📝 Vulnerability
+- Order (used for simulation of vulnerability) `GET /api/orders/:id` - Exposes user_id, shipment_id to unauthenticated visitors.
+- Recent orders (used for simulation of vulnerability) `GET /api/orders/recent` - Exposes order_id, user_id, shipment_id to unauthenticated visitors.
+
+### ⚠️ Security Vulnerability Simulation
+- IDOR (Insecure Direct Object Reference)
+- Data exposure through improperly scoped APIs
