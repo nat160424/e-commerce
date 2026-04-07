@@ -5,7 +5,7 @@ export const ProductContext = createContext();
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
-  const backendUrl =  "http://localhost:8081";
+  const backendUrl =  "https://localhost";
 
   const getProducts = async () => {
     const response = await axios.get(`${backendUrl}/api/products`, {withCredentials: true});
