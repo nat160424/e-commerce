@@ -13,10 +13,19 @@ const Product = () => {
   const [image, setImage] = useState("");
   const [size, setSize] = useState("");
 
-  // Generate image URL from image ID using the API endpoint
-  const getImageUrl = (imageId) => {
-    if (!imageId) return '';
-    return `${backendUrl}/api/product/image/${imageId}`;
+  const getImageUrl = (imageKey) => {
+    if (!imageKey) return "";
+    if (imageKey.startsWith("http://") || imageKey.startsWith("https://") || imageKey.startsWith("data:")) {
+      return imageKey;
+    }
+    const isLocalFilePath = imageKey.startsWith("file:///") || /^[A-Za-z]:\\\\/.test(imageKey) || imageKey.startsWith("\\\\");
+    if (isLocalFilePath) {
+      return "";
+    }
+    if (imageKey.includes(".")) {
+      return `${backendUrl}/uploads/${imageKey}`;
+    }
+    return `${backendUrl}/api/product/image/${imageKey}`;
   };
 
   const fetchProductData = async () => {

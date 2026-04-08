@@ -6,9 +6,19 @@ import { backendUrl } from "../api/axiosInstance";
 const ProductItem = ({ id, image, name, price }) => {
   const { currency } = useContext(ShopContext);
 
-  const getImageUrl = (imageId) => {
-    if (!imageId) return '';
-    return `${backendUrl}/api/product/image/${imageId}`;
+  const getImageUrl = (imageKey) => {
+    if (!imageKey) return "";
+    if (imageKey.startsWith("http://") || imageKey.startsWith("https://") || imageKey.startsWith("data:")) {
+      return imageKey;
+    }
+    const isLocalFilePath = imageKey.startsWith("file:///") || /^[A-Za-z]:\\\\/.test(imageKey) || imageKey.startsWith("\\\\");
+    if (isLocalFilePath) {
+      return "";
+    }
+    if (imageKey.includes(".")) {
+      return `${backendUrl}/uploads/${imageKey}`;
+    }
+    return `${backendUrl}/api/product/image/${imageKey}`;
   };
 
   const defaultImage = "https://png.pngtree.com/png-vector/20190820/ourmid/pngtree-no-image-vector-illustration-isolated-png-image_1694547.jpg";

@@ -57,30 +57,38 @@ func UploadImage(file *multipart.FileHeader) (string, error) {
 		return "", err
 	}
 
-	// Return only the UUID ID, not the full path
-	return imageID, nil
+	// Return the saved filename so the frontend can build a public URL
+	return filename, nil
 }
 
 func UploadImages(files []*multipart.FileHeader) ([]string, error) {
-	var imageIDs []string
+	var imageFilenames []string
 
 	for _, file := range files {
-		imageID, err := UploadImage(file)
+		filename, err := UploadImage(file)
 		if err != nil {
 			return nil, err
 		}
-		imageIDs = append(imageIDs, imageID)
+		imageFilenames = append(imageFilenames, filename)
 	}
 
-	return imageIDs, nil
+	return imageFilenames, nil
 }
 
-func GetImage(id string) (string, error) {
-	// Try different extensions
+func GetImage(idOrFilename string) (string, error) {
+	// If filename already contains an extension, use it directly.
+	if filepath.Ext(idOrFilename) != "" {
+		path := filepath.Join(uploadDir, idOrFilename)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	// Try different extensions for pure IDs.
 	extensions := []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 	for _, ext := range extensions {
-		filename := fmt.Sprintf("%s%s", id, ext)
+		filename := fmt.Sprintf("%s%s", idOrFilename, ext)
 		path := filepath.Join(uploadDir, filename)
 
 		if _, err := os.Stat(path); err == nil {

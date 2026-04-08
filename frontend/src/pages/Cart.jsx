@@ -40,14 +40,28 @@ const Cart = () => {
     }
   }, [cartItems, products]);
 
+  const getImageUrl = (imageKey) => {
+    if (!imageKey) return "";
+    if (imageKey.startsWith("http://") || imageKey.startsWith("https://") || imageKey.startsWith("data:")) {
+      return imageKey;
+    }
+    const isLocalFilePath = imageKey.startsWith("file:///") || /^[A-Za-z]:\\\\/.test(imageKey) || imageKey.startsWith("\\\\");
+    if (isLocalFilePath) {
+      return "";
+    }
+    if (imageKey.includes(".")) {
+      return `${backendUrl}/uploads/${imageKey}`;
+    }
+    return `${backendUrl}/api/product/image/${imageKey}`;
+  };
+
   const getFirstProductImage = (productId) => {
     const product = products.find((product) => product._id === productId);
     
     if (product && product.images && product.images.length > 0) {
-      return `${backendUrl}/api/product/image/${product.images[0]}`;
+      return getImageUrl(product.images[0]);
     }
     
-    // Return default image if product or images not found
     return "https://png.pngtree.com/png-vector/20190820/ourmid/pngtree-no-image-vector-illustration-isolated-png-image_1694547.jpg";
   };
 

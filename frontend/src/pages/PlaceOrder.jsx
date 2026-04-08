@@ -44,8 +44,20 @@ const PlaceOrder = () => {
     }
   }, [cartItems, products]);
 
-  const getImageUrl = (id) =>
-    id ? `${backendUrl}/api/product/image/${id}` : "";
+  const getImageUrl = (imageKey) => {
+    if (!imageKey) return "";
+    if (imageKey.startsWith("http://") || imageKey.startsWith("https://") || imageKey.startsWith("data:")) {
+      return imageKey;
+    }
+    const isLocalFilePath = imageKey.startsWith("file:///") || /^[A-Za-z]:\\\\/.test(imageKey) || imageKey.startsWith("\\\\");
+    if (isLocalFilePath) {
+      return "";
+    }
+    if (imageKey.includes(".")) {
+      return `${backendUrl}/uploads/${imageKey}`;
+    }
+    return `${backendUrl}/api/product/image/${imageKey}`;
+  };
 
   // ── Địa chỉ hành chính ─────────────────────────────────────────────────────
   useEffect(() => {
